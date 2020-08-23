@@ -55,35 +55,31 @@ def run_mse_curve_expmt(dataset_name, config):
     curve_model_names = ['NLS_w', 'NLS_rse', 'linear', 'initial']
     config_sig = '_'.join([str(x) for x in config.values()])
     
-    results = []
-    results_path = "./results/forecasting/" + dataset_name + '_' + config_sig
-    if not os.path.exists(results_path):
-        os.makedirs(results_path)
-    
-    for j in range(n_runs):
-        config['split_num'] = j
-        dataset = MovieLensDataset(dataset_name, config) 
-        best_mse = best_possible_MSE(dataset, rank_opt)
-        worst_mse = worst_possible_MSE(dataset, rank_opt)
-        best_val_mse = best_possible_MSE(dataset, rank_opt, "val")
-        worst_val_mse = worst_possible_MSE(dataset, rank_opt, "val")
+    for acq_model_name in acq_model_names:
+        results = []
+        results_path = "./results/forecasting/" + dataset_name + '/' + acq_model_name + '/' + config_sig
+        if not os.path.exists(results_path):
+            os.makedirs(results_path)
+        acq_model = get_acquisition_model(acq_model_name, config)
+        all_sample_sizes = []
+        all_mses = []
+        for j in range(n_runs):
+            config['split_num'] = j
+            dataset = MovieLensDataset(dataset_name, config) 
+            best_mse = best_possible_MSE(dataset, rank_opt)
+            worst_mse = worst_possible_MSE(dataset, rank_opt)
+            best_val_mse = best_possible_MSE(dataset, rank_opt, "val")
+            worst_val_mse = worst_possible_MSE(dataset, rank_opt, "val")
 
-        mses = []
-        sample_sizes = [] 
-        for acq_model_name in acq_model_names:
-            acq_model = get_acquisition_model(acq_model_name, config)
-            
+            mses = []
+            sample_sizes = [] 
+            all_test_mses = []            
             curve_models = [get_curve_model(cm_name, config) for cm_name in curve_model_names]
-            finished_cms = [] 
             i = 0
             while i < n_acquisitions: 
-                print("FINISHED CMS: ", finished_cms)
                 acquired_idxs = acq_model.acquire_features(dataset, batch_size)
                 dataset.add(acquired_idxs)
                 sample_sizes, mses, test_mses = subsample_idxs(dataset, config, sample_sizes, mses)
-                np.savetxt('ss', sample_sizes)
-                np.savetxt('mses', mses)
-                np.savetxt('test_mses', test_mses)
 
 
                 n_init = len(dataset.init_idxs)
@@ -103,8 +99,6 @@ def run_mse_curve_expmt(dataset_name, config):
                                worst_val_mse, best_val_mse)
                 micro_mse_val, macro_mse_val, micro_pct_val, _ = mse_scores_val
                 for cm in curve_models:
-                    if cm.name in finished_cms:
-                        continue
                     if i == 0:
                         cm.fit(sample_sizes, mses)
                     elif 'NLS' in cm.name:
@@ -113,8 +107,6 @@ def run_mse_curve_expmt(dataset_name, config):
                     pred_curr = cm.f(n_available, **cm.p)
                     pred_best = cm.f(n_observable, **cm.p)
                     pred_worst = cm.f(n_init, **cm.p)
-                    np.savetxt(cm.name + '_training_ss', sample_sizes)
-                    np.savetxt(cm.name + '_training_mses', mses)
                     pct_available = dataset.pct_available_idxs()
                     result = {'curve_model': cm.name, 
                             'acq_model': acq_model_name,
@@ -133,15 +125,19 @@ def run_mse_curve_expmt(dataset_name, config):
                     results.append(result)
                     pd.DataFrame(results).to_csv(results_path + '/results_df')
 
-                    if stop:
-                        finished_cms.append(cm.name)
                 i += batch_size
+            all_sample_sizes.append(sample_sizes)
+            all_mses.append(mses)
+            all_test_mses.append(test_mses)
+        np.savetxt(results_path + '/sample_sizes', all_sample_sizes)
+        np.savetxt(results_path + '/mses', all_mses)
+        np.savetxt(results_path + '/test_mses', all_test_mses)
 
 
 
 mltiny_config = {'n_runs': 3, 'checks': False, 'init_pct': .1, 
         'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 1000,
-        'step_size': 250, 't': 0,
+        'step_size': 200, 't': 0,
         'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 20000,
           'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .85} 
 
@@ -151,15 +147,26 @@ mluniform_config = {'n_runs': 5, 'checks': False, 'init_pct': .1,
         'step_size': 20000, 't': 0,
           'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
 
-rtr_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
-        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 360,
-        'rank_opt': 3, 'split_num': 1, 'n_acquisitions': 3600,
-        'step_size': 80,
+gltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 1800,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 18000,
+        'step_size': 360, 't': 0,
           'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
 
+gl_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 19000,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 190000,
+        'step_size': 3800, 't': 0, 
+          'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
+
+
 dataset_names = [('ml-20m-tiny', mltiny_config), ('ml-20m-uniform', mluniform_config)]
-dataset_names = [('rtr', rtr_config)]
-dataset_names = [('ml-20m-tiny', mltiny_config)]
+dataset_names = [('ml-20m-uniform', mluniform_config)]
+dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
+                 ('ml-20m-uniform', mluniform_config),
+                 ('gl', gl_config)]
+dataset_names = [('gl-tiny', gltiny_config)]
+dataset_names = [('gl', gl_config)]
 dataset_names = [('ml-20m-uniform', mluniform_config)]
 # to run multiple experiments, create multiple configs
 init_modes = ['user_subset', 'item_subset']
