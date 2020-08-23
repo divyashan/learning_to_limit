@@ -9,8 +9,9 @@ from acquisition import get_acquisition_model
 from utils.dataset_helpers import set_to_array, get_SVD_pred
 from eval_fs import all_MSE, micro_MSE, quantity_cost, best_possible_MSE, worst_possible_MSE 
 
-def subsample_idxs(dataset, config, sample_sizes=[], mses=[]):
+def subsample_idxs(dataset, config, sample_sizes=[], mses=[], test_mses=[]):
     step_size = config['step_size']
+    rank_opt = config['rank_opt']
     n_runs = 1 
     n_feats = dataset.n_fs
     available_idxs = set_to_array(dataset.available_idxs())
@@ -24,30 +25,24 @@ def subsample_idxs(dataset, config, sample_sizes=[], mses=[]):
     sample_opts = [opt for opt in sample_opts if (opt > max_existing_sample)] 
     new_mses = []
     new_sample_sizes = []
-    test_mses = []
+    new_test_mses = []
     for sample_size in sample_opts:
         for i in range(n_runs):
             sample_idxs = np.random.choice(range(n_available), 
                                            sample_size, replace=False)
             sample_idxs = [available_idxs[i] for i in sample_idxs]
-            val_pred = get_SVD_pred(dataset, 30, sample_idxs, dataset.val_idxs)
+            val_pred = get_SVD_pred(dataset, rank_opt, sample_idxs, dataset.val_idxs)
             mse = micro_MSE(dataset.X, val_pred, dataset.val_idxs)
 
-            test_pred = get_SVD_pred(dataset, 30, sample_idxs, dataset.test_idxs)
+            test_pred = get_SVD_pred(dataset, rank_opt, sample_idxs, dataset.test_idxs)
             test_mse = micro_MSE(dataset.X, test_pred, dataset.test_idxs)
             new_sample_sizes.append(sample_size)
             new_mses.append(mse)
-            test_mses.append(mse)
-    if len(sample_sizes) == 0 and 1 == 0:
-        # Add point for no data aka a random guess
-        new_sample_sizes.append(1e-6)
-        fill_val = np.mean(dataset.get_funksvd_df(dataset.available_idxs())['rating'])
-        val_pred = np.full((len(val_pred)), fill_val)
-        mse = micro_MSE(dataset.X, val_pred, dataset.val_idxs)
-        new_mses.append(mse)
+            new_test_mses.append(test_mse)
     sample_sizes.extend(new_sample_sizes)
     mses.extend(new_mses)
-    return sample_sizes, mses
+    test_mses.extend(new_test_mses)
+    return sample_sizes, mses, test_mses
 
 def run_mse_curve_expmt(dataset_name, config):
     n_runs = config['n_runs']
@@ -55,81 +50,122 @@ def run_mse_curve_expmt(dataset_name, config):
     goal_pct = config['global_goal']
     batch_size = config['batch_size']
     n_acquisitions = config['n_acquisitions'] 
-    acq_model_names = ['Random', 'Weighted']
-    curve_model_names = ['NLS', 'NLS_w', 'NLS_rse']
+    
+    acq_model_names = ['Random'] 
+    curve_model_names = ['NLS_w', 'NLS_rse', 'linear', 'initial']
     config_sig = '_'.join([str(x) for x in config.values()])
+    
+    results = []
+    results_path = "./results/forecasting/" + dataset_name + '_' + config_sig
+    if not os.path.exists(results_path):
+        os.makedirs(results_path)
+    
+    for j in range(n_runs):
+        config['split_num'] = j
+        dataset = MovieLensDataset(dataset_name, config) 
+        best_mse = best_possible_MSE(dataset, rank_opt)
+        worst_mse = worst_possible_MSE(dataset, rank_opt)
+        best_val_mse = best_possible_MSE(dataset, rank_opt, "val")
+        worst_val_mse = worst_possible_MSE(dataset, rank_opt, "val")
 
-    sample_sizes = [] 
-    mses = []
-    for acq_model_name in acq_model_names:
-        results = []
-        acq_model = get_acquisition_model(acq_model_name, config)
-        # TODO: write to results path
-        for curve_model_name in curve_model_names:
-            curve_model = get_curve_model(curve_model_name, config)
-            results_path = "./results/forecasting/" + dataset_name + '_' + config_sig
-            if not os.path.exists(results_path):
-                os.makedirs(results_path)
+        mses = []
+        sample_sizes = [] 
+        for acq_model_name in acq_model_names:
+            acq_model = get_acquisition_model(acq_model_name, config)
+            
+            curve_models = [get_curve_model(cm_name, config) for cm_name in curve_model_names]
+            finished_cms = [] 
+            i = 0
+            while i < n_acquisitions: 
+                print("FINISHED CMS: ", finished_cms)
+                acquired_idxs = acq_model.acquire_features(dataset, batch_size)
+                dataset.add(acquired_idxs)
+                sample_sizes, mses, test_mses = subsample_idxs(dataset, config, sample_sizes, mses)
+                np.savetxt('ss', sample_sizes)
+                np.savetxt('mses', mses)
+                np.savetxt('test_mses', test_mses)
 
-            for j in range(n_runs):
-                dataset = MovieLensDataset(dataset_name, config) 
-                best_mse = best_possible_MSE(dataset, rank_opt)
-                worst_mse = worst_possible_MSE(dataset, rank_opt)
-                
-                i = 0
-                stopping = False
-                while i < n_acquisitions and stopping == False:
-                    acquired_idxs = acq_model.acquire_features(dataset, batch_size) 
-                    dataset.add(acquired_idxs)
-                    sample_sizes, mses = subsample_idxs(dataset, config, sample_sizes, mses)
-                    np.savetxt('ss', sample_sizes)
-                    np.savetxt('mses', mses)
-                    curve_model.fit(sample_sizes, mses)
 
-                    n_init = len(dataset.init_idxs)
-                    n_acquired = dataset.n_available_idxs()
-                    n_observable = dataset.n_observable_idxs()
-                    stopping = curve_model.stop_condition(goal_pct, n_init, n_acquired, n_observable)
-                    i += batch_size
-                
+                n_init = len(dataset.init_idxs)
+                n_available = dataset.n_available_idxs()
+                n_observable = dataset.n_observable_idxs()
                 pred = get_SVD_pred(dataset, rank_opt, 
                                     dataset.available_idxs(),
                                     dataset.test_idxs) 
-                mse_vals = all_MSE(dataset.X, pred, dataset.test_idxs, 
+                mse_scores = all_MSE(dataset.X, pred, dataset.test_idxs, 
                                worst_mse, best_mse)
-                micro_mse, macro_mse, micro_pct = mse_vals
-                _, q_cost = quantity_cost(dataset)
-                n_available = dataset.n_available_idxs()
-                pct_available = dataset.pct_available_idxs()
-                result = {'curve_model': curve_model_name, 
-                        'acq_model': acq_model_name,
-                        'n_acquired': i, 'pct_available': pct_available, 
-                        'micro_mse': micro_mse, 'micro_pct': micro_pct, 
-                        'goal_pct': goal_pct, 'n_available': n_available,
-                        'macro_mse': macro_mse, 'quantity_cost': q_cost}
-                results.append(result)
-                pd.DataFrame(results).to_csv(results_path + '/results_df')
+                micro_mse, macro_mse, micro_pct, macro_mses = mse_scores
+                
+                val_pred = get_SVD_pred(dataset, rank_opt, 
+                                    dataset.available_idxs(),
+                                    dataset.val_idxs) 
+                mse_scores_val = all_MSE(dataset.X, val_pred, dataset.val_idxs, 
+                               worst_val_mse, best_val_mse)
+                micro_mse_val, macro_mse_val, micro_pct_val, _ = mse_scores_val
+                for cm in curve_models:
+                    if cm.name in finished_cms:
+                        continue
+                    if i == 0:
+                        cm.fit(sample_sizes, mses)
+                    elif 'NLS' in cm.name:
+                        cm.fit(sample_sizes, mses)
+                    stop, pred_pct = cm.stop_condition(goal_pct, n_init, n_available, n_observable)
+                    pred_curr = cm.f(n_available, **cm.p)
+                    pred_best = cm.f(n_observable, **cm.p)
+                    pred_worst = cm.f(n_init, **cm.p)
+                    np.savetxt(cm.name + '_training_ss', sample_sizes)
+                    np.savetxt(cm.name + '_training_mses', mses)
+                    pct_available = dataset.pct_available_idxs()
+                    result = {'curve_model': cm.name, 
+                            'acq_model': acq_model_name,
+                            'n_acquired': i, 'pct_available': pct_available,
+                            'n_observable': n_observable,
+                            'micro_mse': micro_mse, 'micro_pct': micro_pct, 
+                            'goal_pct': goal_pct, 'n_available': n_available, 'n_init': n_init,
+                            'n_observable': n_observable,
+                            'macro_mse': macro_mse, 'run': j,
+                            'micro_mse_val': micro_mse_val, 
+                            'macro_mse_val': macro_mse_val,
+                            'micro_pct_val': micro_pct_val,
+                            'pred_pct': pred_pct, 'pred_curr': pred_curr,
+                            'pred_best': pred_best, 'pred_worst': pred_worst,
+                            'best_mse': best_mse, 'worst_mse': worst_mse}
+                    results.append(result)
+                    pd.DataFrame(results).to_csv(results_path + '/results_df')
 
-mltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
-        'test_pct': .4, 'init_mode': 'user_subset', 'batch_size': 1000,
-        'step_size': 250,
+                    if stop:
+                        finished_cms.append(cm.name)
+                i += batch_size
+
+
+
+mltiny_config = {'n_runs': 3, 'checks': False, 'init_pct': .1, 
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 1000,
+        'step_size': 250, 't': 0,
         'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 20000,
           'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .85} 
 
 mluniform_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
-        'test_pct': .4, 'init_mode': 'user_subset', 'batch_size': 40000,
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 100000,
         'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 1000000,
-        'step_size': 10000,
+        'step_size': 20000, 't': 0,
+          'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
+
+rtr_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 360,
+        'rank_opt': 3, 'split_num': 1, 'n_acquisitions': 3600,
+        'step_size': 80,
           'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
 
 dataset_names = [('ml-20m-tiny', mltiny_config), ('ml-20m-uniform', mluniform_config)]
-dataset_names = [('ml-20m-uniform', mluniform_config)]
+dataset_names = [('rtr', rtr_config)]
 dataset_names = [('ml-20m-tiny', mltiny_config)]
-
-
+dataset_names = [('ml-20m-uniform', mluniform_config)]
 # to run multiple experiments, create multiple configs
 init_modes = ['user_subset', 'item_subset']
-global_goals = [.6, .8, .85, .9, .95]
+init_modes = ['uniform']
+global_goals = [.8, .85, .9, .95]
+global_goals = [.8]
 for dataset_name, config in dataset_names:
     for init_mode in init_modes:
         for global_goal in global_goals:

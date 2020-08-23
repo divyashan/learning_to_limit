@@ -141,18 +141,17 @@ class Weighted(Baseline):
         self.svd_ranks = [int(i+1) for i in range(n_svd_ranks)]
     
     def acquire_features(self, dataset, k):
-        matrices = []
+        pool_preds = []
         for i in self.svd_ranks:
-            svd_mc = IterativeSVD_mc(rank=i)
-            completed_mat = svd_mc.impute(dataset.X, observed_mask=dataset.observed_mask())
-            matrices.append(completed_mat)
-        svd_uncertainty = np.var(np.array(matrices), axis=0)
+            pool_pred = get_SVD_pred(dataset, i, dataset.available_idxs(), dataset.pool_idxs)
+            pool_preds.append(pool_pred)
+        svd_uncertainty = np.var(np.array(pool_preds), axis=0)
         # subselect to the dataset.pool_idxs
         mask = dataset.observed_mask()
         pool_idxs = set_to_array(dataset.pool_idxs)
         row_idxs = pool_idxs[:,0]
         col_idxs = pool_idxs[:,1]
-        v = svd_uncertainty[row_idxs,col_idxs]
+        v = svd_uncertainty
         #p = [quantity_cost_mask(mask, tuple(idx))[1] for idx in pool_idxs]
         v = normalize(np.log(v)) 
         #p = normalize(p)

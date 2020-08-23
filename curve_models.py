@@ -4,23 +4,30 @@ import statsmodels.api as sm
 import pdb
 def get_curve_model(curve_model_name, config):
     if curve_model_name == 'NLS':
-        return NLLS(power_law)
+        return NLLS(power_law, name='NLS')
     elif curve_model_name == 'NLS_w':
-        return NLLS_w(power_law)
+        return NLLS_w(power_law, name='NLS_w')
     elif curve_model_name == 'NLS_rse':
-        return NLLS_rse(power_law)
-
+        return NLLS_rse(linearized_power_law, name='NLS_rse', threshold=config['t'])
+    elif curve_model_name == 'initial':
+        return NLLS(power_law, name='Initial')
+    elif curve_model_name == 'linear':
+        return CurveModel(lambda x: x, name='Linear')
 def power_law(x, a, b):
     return (b*x**(-a))
 
 def linearized_power_law(x, a, b):
     return np.exp(b + a*np.log(x))
 
+def exponential_law(x, a, b):
+    return (a*b**(1/x))
+
 class CurveModel(object):
 
-    def __init__(self, fit_f, init_params=None):
+    def __init__(self, fit_f, init_params=None, name="cm"):
         self.f = fit_f
         self.p = {}
+        self.name = name
         pass
 
     def fit(self, sample_sizes, sample_mses):
@@ -33,10 +40,12 @@ class CurveModel(object):
         pred_progress = self.pred(n_init)-self.pred(n_samples)
         pred_total = self.pred(n_init) - self.pred(n_total)
         pred_pct = pred_progress/pred_total
-        return (pred_pct > pct)
+        print("NAME: ", self.name)
+        print("# init: ", n_init, "# samples", n_samples, "# total", n_total)
+        print("pred pct", pred_pct, "goal ", pct)
+        return (pred_pct > pct), pred_pct
 
 class NLLS(CurveModel):
-    
     def fit(self, sample_sizes, sample_mses):
         popt, pcov = curve_fit(self.f, xdata=sample_sizes, ydata=sample_mses, p0=[0,0], absolute_sigma=True)
         print(pcov)
@@ -56,10 +65,29 @@ class NLLS_w(CurveModel):
         self.p['b'] = popt[1]
         self.pcov = pcov
 
-class NLLS_rse(CurveModel):
+class NLLS_el(CurveModel):
+
     def fit(self, sample_sizes, sample_mses):
-        log_x = [np.log(i) for i in sample_sizes]
-        log_y = [np.log(i) for i in sample_mses]
+        popt, pcov = curve_fit(self.f, xdata.sample_sizes, ydata=sample_mses, p0=[0,0], sigma=sigma, absolute_sigma=True)
+        self.p['a'] = popt[0]
+        self.p['b'] = popt[1]
+        self.pcov = pcov
+
+class NLLS_rse(CurveModel):
+    def __init__(self, fit_f, init_params=None, threshold=0, name='cm'):
+        self.f = fit_f
+        self.p = {}
+        self.t = threshold
+        self.name = name
+
+    def fit(self, sample_sizes, sample_mses):
+        ss, mses = [], []
+        for s, m in zip(sample_sizes, sample_mses):
+            if s > self.t:
+                ss.append(s)
+                mses.append(m)
+        log_x = [np.log(i) for i in ss]
+        log_y = [np.log(i) for i in mses]
         log_x = sm.add_constant(log_x)
         result = sm.OLS(log_y, log_x).fit()
         result = result.get_robustcov_results('HC3')

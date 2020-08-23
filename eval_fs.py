@@ -8,10 +8,10 @@ from utils.dataset_helpers import set_to_array, get_SVD_pred
 def all_MSE(true, pred, idxs, worst_mse, best_mse):
     micro_mse, micro_pct = micro_pct_MSE(true, pred, idxs,
                                          worst_mse, best_mse)
-    #macro_mse = macro_MSE(true, pred, idxs)
+    macro_mse, macro_mses = macro_MSE(true, pred, idxs)
     # TODO: include pct of user performance, fix macro_mse
-    macro_mse = -1
-    return micro_mse, macro_mse, micro_pct
+    #macro_mse = -1
+    return micro_mse, macro_mse, micro_pct, macro_mses
 
 def micro_MSE(true, pred, idxs):
     # true: NxD matrix of observations for N users, D features
@@ -26,20 +26,19 @@ def macro_MSE(true, pred, idxs):
     # true: NxD matrix of observations for N users, D features
     # pred: NxD matrix of predicted observations
     # idxs: idxs to calculate MSE over
-    # TODO: change this to accept pred as a list of values 
-    # corresponding to idxs
     n_users = true.shape[0]
     observed_mat = np.zeros(true.shape)
-    for i in idxs:
-        observed_mat[i[0], i[1]] = 1
-    
+    pred_mat = np.zeros(true.shape)
+    idxs = set_to_array(idxs)
+    for i, idx in enumerate(idxs):
+        observed_mat[idx[0], idx[1]] = 1
+        pred_mat[idx[0], idx[1]] = pred[i]
+
     user_mses = []
     for i in range(n_users):
-        test_feats = np.where(observed_mat[i] == 0)[0]
-
-        if len(test_feats):
-            diff = pred[i,test_feats] - true[i,test_feats]
-            user_mses.append(np.mean(np.square(diff)))
+        test_feats = np.where(observed_mat[i] == 1)[0]
+        diff = pred_mat[i,test_feats] - true[i,test_feats]
+        user_mses.append(np.mean(np.square(diff)))
     return np.mean(user_mses), user_mses
 
 def micro_pct_MSE(true, pred, idxs, worst_mse, best_mse):
@@ -48,16 +47,25 @@ def micro_pct_MSE(true, pred, idxs, worst_mse, best_mse):
     mse_diff = worst_mse - current_mse 
     return current_mse, mse_diff/best_mse_diff
 
-def best_possible_MSE(dataset, rank_opt):
-    pred = get_SVD_pred(dataset, rank_opt, dataset.observable_idxs(), 
-                        dataset.test_idxs)
-    return micro_MSE(dataset.X, pred, dataset.test_idxs)
+def best_possible_MSE(dataset, rank_opt, mode="test"):
+    if mode == "test":
+        pred = get_SVD_pred(dataset, rank_opt, dataset.observable_idxs(), 
+                            dataset.test_idxs)
+        return micro_MSE(dataset.X, pred, dataset.test_idxs)
+    else:
+        pred = get_SVD_pred(dataset, rank_opt, dataset.observable_idxs(), 
+                            dataset.val_idxs)
+        return micro_MSE(dataset.X, pred, dataset.val_idxs)
 
-def worst_possible_MSE(dataset, rank_opt):
-    pred = get_SVD_pred(dataset, rank_opt, dataset.init_idxs,
-                        dataset.test_idxs)
-    return micro_MSE(dataset.X, pred, dataset.test_idxs)
-
+def worst_possible_MSE(dataset, rank_opt, mode="test"):
+    if mode == "test":
+        pred = get_SVD_pred(dataset, rank_opt, dataset.init_idxs,
+                            dataset.test_idxs)
+        return micro_MSE(dataset.X, pred, dataset.test_idxs)
+    else:
+        pred = get_SVD_pred(dataset, rank_opt, dataset.init_idxs, 
+                            dataset.val_idxs)
+        return micro_MSE(dataset.X, pred, dataset.val_idxs)
 def macro_pct_MSE(true, pred, idxs):
     n_users = true.shape[0]
     n_feats = true.shape[1]
@@ -97,13 +105,8 @@ def quantity_cost(dataset, idx=None):
     return np.mean(user_counts), np.var(user_counts)
 
 def quantity_cost_mask(mask, idx=[]):
-    try:
-        if len(idx):
-            mask[idx] = 1
-    except:
-        pdb.set_trace()
+    if len(idx):
+        mask[idx] = 1
     user_counts = np.sum(mask, axis=1)
     return np.mean(user_counts), np.var(user_counts)
 
-def quality_cost(dataset):
-    pass
