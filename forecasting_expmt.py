@@ -135,10 +135,10 @@ def run_mse_curve_expmt(dataset_name, config):
 
 
 
-mltiny_config = {'n_runs': 3, 'checks': False, 'init_pct': .1, 
-        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 1000,
-        'step_size': 200, 't': 0,
-        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 20000,
+mltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 20000,
+        'step_size': 4000, 't': 0,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 200000,
           'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .85} 
 
 mluniform_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
@@ -148,9 +148,9 @@ mluniform_config = {'n_runs': 5, 'checks': False, 'init_pct': .1,
           'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
 
 gltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
-        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 1800,
-        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 18000,
-        'step_size': 360, 't': 0,
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 9400,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 94000,
+        'step_size': 1880, 't': 0,
           'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
 
 gl_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
@@ -161,16 +161,15 @@ gl_config = {'n_runs': 5, 'checks': False, 'init_pct': .1,
 
 
 dataset_names = [('ml-20m-tiny', mltiny_config), ('ml-20m-uniform', mluniform_config)]
-dataset_names = [('ml-20m-uniform', mluniform_config)]
 dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
                  ('ml-20m-uniform', mluniform_config),
                  ('gl', gl_config)]
-dataset_names = [('gl-tiny', gltiny_config)]
-dataset_names = [('gl', gl_config)]
-dataset_names = [('ml-20m-uniform', mluniform_config)]
+#dataset_names = [('gl-tiny', gltiny_config)]
+#dataset_names = [('gl', gl_config)]
+#dataset_names = [('ml-20m-uniform', mluniform_config)]
+#dataset_names = [('ml-20m-tiny', mltiny_config)]
 # to run multiple experiments, create multiple configs
 init_modes = ['user_subset', 'item_subset']
-init_modes = ['uniform']
 global_goals = [.8, .85, .9, .95]
 global_goals = [.8]
 for dataset_name, config in dataset_names:
