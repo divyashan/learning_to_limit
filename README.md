@@ -1,8 +1,10 @@
-# learning_to_limit
+# Learning to Limit Data for Data Minimization Compliance
 data minimization in machine learning
 
 ```
 # Conda environment:
+conda create -n llddm python=??? anaconda
+source activate llddm
 
 # CUDA:
 nvcc --version
