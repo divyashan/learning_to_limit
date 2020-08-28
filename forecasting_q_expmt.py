@@ -53,11 +53,12 @@ def run_mse_curve_expmt(dataset_name, config):
     
     acq_model_names = ['Random'] 
     curve_model_names = ['NLS_w', 'NLS_rse', 'linear', 'initial']
+    q_strategy = ['Const', 'Mult', 'Adapt']
     config_sig = '_'.join([str(x) for x in config.values()])
     
     for acq_model_name in acq_model_names:
         results = []
-        results_path = "./results/forecasting/" + dataset_name + '/' + acq_model_name + '/' + config_sig
+        results_path = "./results/q_strategy/" + dataset_name + '/' + acq_model_name + '/' + config_sig
         if not os.path.exists(results_path):
             os.makedirs(results_path)
         acq_model = get_acquisition_model(acq_model_name, config)
@@ -99,31 +100,36 @@ def run_mse_curve_expmt(dataset_name, config):
                                worst_val_mse, best_val_mse)
                 micro_mse_val, macro_mse_val, micro_pct_val, _ = mse_scores_val
                 for cm in curve_models:
+                    if cm.name in finished_cms:
+                        continue
+
                     if i == 0:
                         cm.fit(sample_sizes, mses)
                     elif 'NLS' in cm.name:
                         cm.fit(sample_sizes, mses)
                     stop, pred_pct = cm.stop_condition(goal_pct, n_init, n_available, n_observable)
-                    pred_curr = cm.f(n_available, **cm.p)
-                    pred_best = cm.f(n_observable, **cm.p)
-                    pred_worst = cm.f(n_init, **cm.p)
-                    pct_available = dataset.pct_available_idxs()
-                    result = {'curve_model': cm.name, 
-                            'acq_model': acq_model_name,
-                            'n_acquired': i, 'pct_available': pct_available,
-                            'n_observable': n_observable,
-                            'micro_mse': micro_mse, 'micro_pct': micro_pct, 
-                            'goal_pct': goal_pct, 'n_available': n_available, 'n_init': n_init,
-                            'n_observable': n_observable,
-                            'macro_mse': macro_mse, 'run': j,
-                            'micro_mse_val': micro_mse_val, 
-                            'macro_mse_val': macro_mse_val,
-                            'micro_pct_val': micro_pct_val,
+                    if stop:
+                        finished_cms.append(cm.name)
+                        pred_curr = cm.f(n_available, **cm.p)
+                        pred_best = cm.f(n_observable, **cm.p)
+                        pred_worst = cm.f(n_init, **cm.p)
+                        pct_available = dataset.pct_available_idxs()
+                        result = {'curve_model': cm.name, 
+                                'acq_model': acq_model_name,
+                                'n_acquired': i, 'pct_available': pct_available,
+                                'n_observable': n_observable,
+                                'micro_mse': micro_mse, 'micro_pct': micro_pct, 
+                                'goal_pct': goal_pct, 'n_available': n_available, 'n_init': n_init,
+                                'n_observable': n_observable,
+                                'macro_mse': macro_mse, 'run': j,
+                                'micro_mse_val': micro_mse_val, 
+                                'macro_mse_val': macro_mse_val,
+                                'micro_pct_val': micro_pct_val,
                             'pred_pct': pred_pct, 'pred_curr': pred_curr,
                             'pred_best': pred_best, 'pred_worst': pred_worst,
                             'best_mse': best_mse, 'worst_mse': worst_mse}
-                    results.append(result)
-                    pd.DataFrame(results).to_csv(results_path + '/results_df')
+                        results.append(result)
+                        pd.DataFrame(results).to_csv(results_path + '/results_df')
 
                 i += batch_size
             all_sample_sizes.append(sample_sizes)
@@ -134,38 +140,34 @@ def run_mse_curve_expmt(dataset_name, config):
         np.savetxt(results_path + '/test_mses', all_test_mses)
 
 
-init_pct = .0001
-mltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': init_pct, 
-        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 200,
-        'step_size': 50, 't': 0,
-        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 2000,
-          'item_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .85} 
 
-mluniform_config = {'n_runs': 5, 'checks': False, 'init_pct': init_pct, 
-        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 600,
-        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 12000,
-        'step_size': 30, 't': 0,
-          'item_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
+mltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 20000,
+        'step_size': 4000, 't': 0,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 200000,
+          'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .85} 
 
-gltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': init_pct, 
-        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 200,
-        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 1000,
-        'step_size': 25, 't': 0,
-          'item_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
+mluniform_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 100000,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 1000000,
+        'step_size': 20000, 't': 0,
+          'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
 
-gl_config = {'n_runs': 5, 'checks': False, 'init_pct': init_pct, 
-        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 200,
-        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 2000,
-        'step_size': 50, 't': 0, 
-          'item_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
+gltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 9400,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 94000,
+        'step_size': 1880, 't': 0,
+          'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
+
+gl_config = {'n_runs': 5, 'checks': False, 'init_pct': .1, 
+        'test_pct': .4, 'init_mode': 'uniform', 'batch_size': 19000,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 190000,
+        'step_size': 3800, 't': 0, 
+          'feat_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8} 
 
 
 dataset_names = [('ml-20m-tiny', mltiny_config), ('ml-20m-uniform', mluniform_config)]
 dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
-                 ('ml-20m-uniform', mluniform_config),
-                 ('gl', gl_config)]
-
-dataset_names = [('gl-tiny', gltiny_config),
                  ('ml-20m-uniform', mluniform_config),
                  ('gl', gl_config)]
 #dataset_names = [('gl-tiny', gltiny_config)]
@@ -173,7 +175,8 @@ dataset_names = [('gl-tiny', gltiny_config),
 #dataset_names = [('ml-20m-uniform', mluniform_config)]
 #dataset_names = [('ml-20m-tiny', mltiny_config)]
 # to run multiple experiments, create multiple configs
-init_modes = ['uniform']
+init_modes = ['user_subset', 'item_subset']
+global_goals = [.8, .85, .9, .95]
 global_goals = [.8]
 for dataset_name, config in dataset_names:
     for init_mode in init_modes:
