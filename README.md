@@ -7,6 +7,8 @@ data minimization in machine learning
 # CUDA:
 nvcc --version
 ```
+# Downloading the datasets: 
+
 
 ## Sample run:
 
