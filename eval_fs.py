@@ -14,8 +14,6 @@ def all_MSE(true, pred, idxs, worst_mse, best_mse):
     return micro_mse, macro_mse, micro_pct, macro_mses
 
 def micro_MSE(true, pred, idxs):
-    # true: NxD matrix of observations for N users, D features
-    # pred: N_tx1 matrix of predictions for N_t user-feature pairs
     # idxs: N_tx2 matrix of idxs to calculate MSE over
     diffs = []
     for i,idx in enumerate(idxs):
@@ -23,8 +21,6 @@ def micro_MSE(true, pred, idxs):
     return np.sum(np.square(diffs))
 
 def macro_MSE(true, pred, idxs):
-    # true: NxD matrix of observations for N users, D features
-    # pred: NxD matrix of predicted observations
     # idxs: idxs to calculate MSE over
     n_users = true.shape[0]
     observed_mat = np.zeros(true.shape)

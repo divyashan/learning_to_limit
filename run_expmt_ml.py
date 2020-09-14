@@ -11,12 +11,33 @@ from acquisition import get_acquisition_model
 from eval_fs import all_MSE, quantity_cost, best_possible_MSE, worst_possible_MSE
 import pdb
 
-config = {'n_acquisitions': 200000,
-        'init_pct': .10, 'split_num': 1, 'user_pct': .5, 
-        'item_pct': .5, 'init_mode': 'uniform',
+init_pct = .1
+init_mode = 'item_subset'
+ml_config = {'n_acquisitions': 1000001,
+        'init_pct': init_pct, 'split_num': 1, 'user_pct': .5, 
+        'item_pct': .5, 'init_mode': init_mode,
         'feature_cost': 'uniform', 'l': 0.0, 'rank_opt': 30,
-        'checks': False, 'log_interval': 20000, 'n_runs': 5}
+        'checks': False, 'log_interval': 100000, 'n_runs': 5}
 
+mltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': init_pct,
+        'test_pct': .4, 'init_mode': init_mode, 'log_interval': 21000,
+        'step_size': 5250, 't': 0,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 213973,
+          'item_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .85}
+
+gltiny_config = {'n_runs': 5, 'checks': False, 'init_pct': init_pct,
+        'test_pct': .4, 'init_mode': init_mode, 'log_interval': 9400,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 94001,
+        'step_size': 1880, 't': 0,
+          'item_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8}
+
+gl_config = {'n_runs': 5, 'checks': False, 'init_pct': init_pct,
+        'test_pct': .4, 'init_mode': init_mode, 'log_interval': 29000,
+        'rank_opt': 30, 'split_num': 1, 'n_acquisitions': 290001,
+        'step_size': 5800, 't': 0,
+          'item_pct': .5, 'user_pct': .5, 'l': 0, 'global_goal': .8}
+
+config = ml_config
 # nacq = 3800, 380 for rtr
 # nacq = 10000, 1000 for mltiny - should it be more for ml-uniform?
 # nacq = 200000, 20000 for gl 
@@ -25,8 +46,9 @@ n_acquisitions = config['n_acquisitions']
 log_interval = config['log_interval']
 n_runs = config['n_runs']
 
-datasets = ['gl']
-model_names = ['Weighted'] 
+datasets = ['gl', 'gl-tiny', 'ml-20m-uniform', 'ml-20m-tiny']
+datasets = ['ml-20m-uniform']
+model_names = ['Random', 'Weighted', 'QBC'] 
 rank_opt = config['rank_opt']
 for dataset_name in datasets:
     for model_name in model_names:
@@ -41,7 +63,6 @@ for dataset_name in datasets:
         results_f_path = results_path + "/results_df"
         for j in range(n_runs):
             dataset = MovieLensDataset(dataset_name, config)
-            pdb.set_trace()
             best_mse = best_possible_MSE(dataset, rank_opt) 
             worst_mse = worst_possible_MSE(dataset, rank_opt)
             print("Done calculating best/wrost")

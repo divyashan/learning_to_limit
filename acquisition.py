@@ -34,6 +34,13 @@ class Baseline(object):
 
     def __init__(self):
         pass
+
+
+    def return_all_check(self, dataset, n_features):
+        if n_features > len(dataset.pool_idxs):
+            pool_idxs = set_to_array(dataset.pool_idxs)
+            return True, [tuple(i) for i in pool_idxs]
+        return False, []
     
     def acquire_features(self, dataset, n_features):
         acquired_idxs = []
@@ -46,6 +53,10 @@ class Baseline(object):
 class Rand(Baseline):
 
     def acquire_features(self, dataset, n_features):
+        cond, idxs = self.return_all_check(dataset, n_features)
+        if cond:
+            return idxs
+
         pool_idxs = list(dataset.pool_idxs)
         n_pool = len(pool_idxs)
         idx = np.random.choice(np.arange(n_pool), n_features, replace=False)
@@ -121,6 +132,9 @@ class QBC(Baseline):
         return X_k
     
     def acquire_features(self, dataset, n_features):
+        cond, idxs = self.return_all_check(dataset, n_features)
+        if cond:
+            return idxs
         imputations = [self.knn_impute(dataset),
                        self.em_impute(dataset),
                        self.svd_impute(dataset)]
@@ -141,6 +155,10 @@ class Weighted(Baseline):
         self.svd_ranks = [int(i+1) for i in range(n_svd_ranks)]
     
     def acquire_features(self, dataset, k):
+        cond, idxs = self.return_all_check(dataset, k)
+        if cond:
+            return idxs
+        
         pool_preds = []
         for i in self.svd_ranks:
             pool_pred = get_SVD_pred(dataset, i, dataset.available_idxs(), dataset.pool_idxs)

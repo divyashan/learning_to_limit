@@ -48,7 +48,6 @@ class CurveModel(object):
 class NLLS(CurveModel):
     def fit(self, sample_sizes, sample_mses):
         popt, pcov = curve_fit(self.f, xdata=sample_sizes, ydata=sample_mses, p0=[0,0], absolute_sigma=True)
-        print(pcov)
         self.p['a'] = popt[0]
         self.p['b'] = popt[1]
         self.pcov = pcov
