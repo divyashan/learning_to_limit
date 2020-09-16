@@ -13,3 +13,6 @@ def normalize(vals):
     max_val = np.max(vals)
     norm_vals =(vals - min_val)/(max_val-min_val)
     return norm_vals
+
+def calc_pct(pred_best, pred_worst, pred_curr):
+    return (pred_worst - pred_curr)/(pred_worst - pred_best)
