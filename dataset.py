@@ -37,6 +37,17 @@ class Dataset(object):
         self.check_idxs()
 
     def split(self, idxs, config):
+        """ 
+        idxs   : array of tuples in the form (row_idx, col_idx)
+        config : dictionary containing keys 'mode' and 'feat_pct' 
+                 or 'user_pct' if applicable
+        
+        Splits idxs according to config parameters:
+        config['mode'] = one of ['uniform', 'features', 'users'];
+        config['mode'] = 'uniform'  : uniform sampling over all features + all users
+        config['mode'] = 'features' : uniform sampling over config['feat_pct'] of features
+        config['mode'] = 'users'    : uniform sampling over config['user_pct'] of users
+        """
         pct = config['init_pct']/(1-config['test_pct'])
         mode = config['init_mode']
         avail_feats = range(self.n_fs)
@@ -62,6 +73,11 @@ class Dataset(object):
         return init_idxs, pool_idxs
 
     def add(self, idxs):
+        """
+        idxs : array of tuples in the form (row_idx, col_idx)
+        Adds idxs to self.acqu_idxs and 
+        removes idxs from self.pool_idxs
+        """
         self.acqu_idxs = self.acqu_idxs.union(set(idxs))
         self.pool_idxs = self.pool_idxs.difference(set(idxs)) 
         
@@ -69,9 +85,16 @@ class Dataset(object):
         self.check_idxs()
 
     def available_idxs(self):
+        """ 
+        Returns available indices (initialized and acquired)
+        """
         return self.init_idxs.union(self.acqu_idxs)
 
     def observed_mask(self):
+        """
+        Returns a NxC mask of available indices,
+        where N = # of users and C = # of features 
+        """
         mask = np.zeros(self.X.shape)
         observed_idxs = self.available_idxs() 
         for idx in observed_idxs:
@@ -79,20 +102,38 @@ class Dataset(object):
         return mask
         
     def n_available_idxs(self):
+        """
+        Returns # of available indices (initialized and acquired)
+        """
         return len(self.available_idxs())
 
     def observable_idxs(self):
+        """
+        Returns all non-test and non-validation indices.
+        """
         return self.available_idxs().union(self.pool_idxs)
 
     def n_observable_idxs(self):
+        """
+        Returns # of non-test, non-validation indices
+        """
         return self.n_available_idxs() + len(self.pool_idxs)
 
     def pct_available_idxs(self):
+        """
+        Returns % of observable indices available 
+        to the model
+        """
         n_observable = self.n_observable_idxs()
         n_available = self.n_available_idxs()
         return n_available/n_observable
     
     def cluster(self, k):
+        """
+        k : # of clusters
+        Returns Nx1 array of cluster assignments, where N = # users
+        """
+
         # cluster based on initialized idxs
         # returns k groups of user ids
         row_inds = np.array(self.init_idxs)[:,0]
@@ -221,6 +262,13 @@ class MovieLensDataset(Dataset):
 class UsrGrpDataset(Dataset):
 
     def __init__(self, dataset, user_idxs):
+        """ 
+        Not involved in paper experiments. 
+        Part of experiment showing that AFA 
+        within learned user groups does not reduce 
+        data collection burden on a small # of users
+        """
+        
         self.user_idxs = user_idxs
         
         self.X = dataset.X[self.user_idxs,:]

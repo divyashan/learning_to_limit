@@ -2,17 +2,21 @@ import numpy as np
 from scipy.optimize import curve_fit
 import statsmodels.api as sm
 import pdb
-def get_curve_model(curve_model_name, config):
-    if curve_model_name == 'NLS':
+
+def get_curve_model(name):
+    """ Returns curve model given name """ 
+    if name == 'NLS':
         return NLLS(power_law, name='NLS')
-    elif curve_model_name == 'NLS_w':
+    elif name == 'NLS_w':
         return NLLS_w(power_law, name='NLS_w')
-    elif curve_model_name == 'NLS_rse':
-        return NLLS_rse(linearized_power_law, name='NLS_rse', threshold=config['t'])
-    elif curve_model_name == 'initial':
+    elif name == 'NLS_rse':
+        return NLLS_rse(linearized_power_law, name='NLS_rse')
+    elif name == 'initial':
         return NLLS(power_law, name='Initial')
-    elif curve_model_name == 'linear':
+    elif name == 'linear':
         return CurveModel(lambda x: x, name='Linear')
+
+# Specific curve models i
 def power_law(x, a, b):
     return (b*x**(-a))
 
@@ -73,18 +77,13 @@ class NLLS_el(CurveModel):
         self.pcov = pcov
 
 class NLLS_rse(CurveModel):
-    def __init__(self, fit_f, init_params=None, threshold=0, name='cm'):
+    def __init__(self, fit_f, init_params=None, name='cm'):
         self.f = fit_f
         self.p = {}
-        self.t = threshold
         self.name = name
 
     def fit(self, sample_sizes, sample_mses):
         ss, mses = [], []
-        for s, m in zip(sample_sizes, sample_mses):
-            if s > self.t:
-                ss.append(s)
-                mses.append(m)
         log_x = [np.log(i) for i in ss]
         log_y = [np.log(i) for i in mses]
         log_x = sm.add_constant(log_x)

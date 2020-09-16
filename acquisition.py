@@ -8,51 +8,35 @@ import numpy as np
 from scipy.spatial.distance import cdist
 from scipy import linalg
 from utils.dataset_helpers import set_to_array, get_SVD_pred
+from utils.util import perform_svd, normalize
 
-def perform_svd(a,rank):
-    u, s, v = linalg.svd(a)
-    ur = u[:, :rank]
-    sr = np.matrix(linalg.diagsvd(s[:rank], rank,rank))
-    vr = v[:rank, :]
-    return np.asarray(ur*sr*vr)
-
-def get_acquisition_model(name, config):
+def get_acquisition_model(name : str):
+    """ Returns acquisition model """
     if name == 'QBC':
         return QBC()
     elif name == 'Weighted':
-        return Weighted(config['l'])
+        return Weighted()
     else:
         return Rand()
-
-def normalize(vals):
-    min_val = np.min(vals) + 1e-10
-    max_val = np.max(vals)
-    norm_vals =(vals - min_val)/(max_val-min_val)
-    return norm_vals
 
 class Baseline(object):
 
     def __init__(self):
         pass
 
-
-    def return_all_check(self, dataset, n_features):
+    def return_all_check(self, dataset, n_features : int):
+        """ Returns whether n_features exceeds # pool idxs """
         if n_features > len(dataset.pool_idxs):
             pool_idxs = set_to_array(dataset.pool_idxs)
             return True, [tuple(i) for i in pool_idxs]
         return False, []
     
-    def acquire_features(self, dataset, n_features):
-        acquired_idxs = []
-        for i in range(n_features):
-            # logic for choosing the next index
-            acquired_idx.append(idx)
-        return acquired_idxs
-
+    def acquire_features(self, dataset, n_features : int):
+        pass 
 
 class Rand(Baseline):
 
-    def acquire_features(self, dataset, n_features):
+    def acquire_features(self, dataset, n_features : int):
         cond, idxs = self.return_all_check(dataset, n_features)
         if cond:
             return idxs
@@ -121,7 +105,7 @@ class QBC(Baseline):
         return X
 
     def svd_impute(self, dataset, rank_opt=30):
-        # TODO: Move this to FunkSVD
+        """ Returns rank-k SVD approximation of dataset """
         X = dataset.X.copy()
         pred = get_SVD_pred(dataset, rank_opt, dataset.available_idxs(), 
                             dataset.pool_idxs)
@@ -131,7 +115,8 @@ class QBC(Baseline):
             X_k[idx[0], idx[1]] = pred[i]
         return X_k
     
-    def acquire_features(self, dataset, n_features):
+    def acquire_features(self, dataset, n_features : int):
+        """ Acquires n_features from dataset"""
         cond, idxs = self.return_all_check(dataset, n_features)
         if cond:
             return idxs
@@ -150,8 +135,7 @@ class QBC(Baseline):
 
 class Weighted(Baseline):
 
-    def __init__(self, l, n_svd_ranks=3):
-        self.l = l
+    def __init__(self,n_svd_ranks=3):
         self.svd_ranks = [int(i+1) for i in range(n_svd_ranks)]
     
     def acquire_features(self, dataset, k):
@@ -170,11 +154,8 @@ class Weighted(Baseline):
         row_idxs = pool_idxs[:,0]
         col_idxs = pool_idxs[:,1]
         v = svd_uncertainty
-        #p = [quantity_cost_mask(mask, tuple(idx))[1] for idx in pool_idxs]
         v = normalize(np.log(v)) 
-        #p = normalize(p)
-        p = np.zeros(v.shape)
-        c = -1*(1-self.l)*v + self.l*np.array(p)
+        c = -1*v
         selected_idxs = np.argsort(c)[:k]
         return [tuple(pool_idxs[i]) for i in selected_idxs]
 

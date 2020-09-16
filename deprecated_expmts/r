@@ -1,0 +1,52 @@
+import pandas as pd
+import numpy as np
+import pdb
+
+from dataset import MovieLensDataset
+from utils.dataset_helpers import get_SVD_pred
+from acquisition import get_acquisition_model
+from eval_fs import all_MSE, best_possible_MSE, worst_possible_MSE
+from scipy.spatial.distance import cdist
+from acquisition import perform_svd
+
+n_splits = 20 
+dataset_names = ['gl']
+results = []
+for dataset_name in dataset_names:
+    for split_num in range(n_splits):
+        config = {'n_acquisitions': 100000,
+                'init_pct': .10, 'split_num': split_num %5 , 'user_pct': .5,
+                'item_pct': .5, 'init_mode': 'uniform',
+                'feature_cost': 'uniform', 'l': 0.0, 'rank_opt': 30,
+                'checks': False, 'log_interval': 5000, 'n_runs': 5}
+
+        rank_opt = config['rank_opt']
+        n_acquisitions = config['n_acquisitions']
+        log_interval = config['log_interval']
+        dataset = MovieLensDataset(dataset_name, config)
+        i = 10
+        n_features = dataset.n_fs
+        
+        X = dataset.X.T
+        np.random.shuffle(X)
+        X = X.T
+        feat_interval = 10 
+        n_features_total = 100
+        n_test_feats = 500
+        while i <= n_features_total:
+            observed_X = np.zeros(X.shape)
+            observed_X[:,:i] = X[:,:i]
+            #pred_X = perform_svd(observed_X, rank_opt) 
+            #squared_diff = np.square(pred_X[:,-n_test_feats:] - X[:,-n_test_feats:])
+            #rows, cols = np.where(X[:,-n_test_feats:] != 0)
+            #mse = np.mean(squared_diff[rows, cols])
+            mse = 0
+            mean_anonymity = np.mean(np.unique(observed_X[:,:i], axis=0, return_counts=True)[1][1:])
+            i += feat_interval
+            
+            result = {'kanon': mean_anonymity, 'mse': mse, 'n_features': i, 
+                      'dataset': dataset_name}
+            result.update(config)
+            results.append(result)
+            print("Updating")
+            pd.DataFrame(results).to_csv("./results/performance_privacy_curves_gl")
