@@ -7,7 +7,7 @@ from dataset import Dataset, MovieLensDataset
 from curve_models import get_curve_model
 from acquisition import get_acquisition_model
 from utils.dataset_helpers import set_to_array, get_SVD_pred
-from eval_fs import all_MSE, micro_MSE, quantity_cost, best_possible_MSE, worst_possible_MSE, macro_MSE 
+from eval_fs import all_MSE, micro_MSE, best_possible_MSE, worst_possible_MSE, macro_MSE 
 
 def subsample_idxs(dataset, config, sample_sizes=[], mses=[], test_mses=[], macro_mses=[],
                    test_macro_mses=[]):

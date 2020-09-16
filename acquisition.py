@@ -3,7 +3,6 @@ import pdb
 from alipy.query_strategy.query_features import QueryFeatureStability
 from alipy.query_strategy.query_features import QueryFeatureAFASMC
 from alipy.query_strategy.query_features import IterativeSVD_mc
-from eval_fs import quantity_cost_mask
 import numpy as np
 from scipy.spatial.distance import cdist
 from scipy import linalg

@@ -8,7 +8,7 @@ import pandas as pd
 from dataset import MovieLensDataset
 from utils.dataset_helpers import get_SVD_pred 
 from acquisition import get_acquisition_model
-from eval_fs import all_MSE, quantity_cost, best_possible_MSE, worst_possible_MSE
+from eval_fs import all_MSE, best_possible_MSE, worst_possible_MSE
 import pdb
 
 init_pct = .1
