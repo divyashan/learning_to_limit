@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import pdb
+import sys
 
 from dataset import Dataset, MovieLensDataset
 from curve_models import get_curve_model
@@ -78,7 +79,7 @@ def run_mse_curve_expmt(dataset_name, config):
     batch_size = config['batch_size']
     n_acquisitions = config['n_acquisitions'] 
     
-    acq_model_names = ['Weighted'] 
+    acq_model_names = ['Random', 'Weighted', 'QBC'] 
     curve_model_names = ['NLS_w', 'NLS_rse', 'linear', 'initial']
     config_sig = '_'.join([str(x) for x in config.values()])
     
@@ -89,7 +90,7 @@ def run_mse_curve_expmt(dataset_name, config):
         results_path = "./results/forecasting/" + dataset_name + '/' + acq_model_name + '/' + config_sig
         if not os.path.exists(results_path):
             os.makedirs(results_path)
-        
+        continue 
         all_sample_sizes, all_mses = [], []
         all_test_mses, all_macro_mses, all_test_macro_mses = [], [], []           
         for j in range(n_runs):
@@ -208,13 +209,14 @@ else:
     gl_config = base_config.copy()
     gl_config.update({'step_size': 5800, 'batch_size': 29000, 'n_acquisitions': 290001})
 
-    dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
-                     ('ml-20m-uniform', mluniform_config),
-                     ('gl', gl_config)]
 
-init_modes = ['uniform']
-for dataset_name, config in dataset_names:
-    for init_mode in init_modes:
+dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
+                 ('ml-20m-uniform', mluniform_config),
+                 ('gl', gl_config)]
+
+init_modes = ['uniform', 'user-subset', 'item-subset']
+for init_mode in init_modes:
+    for dataset_name, config in dataset_names:
         config['init_mode'] = init_mode
         run_mse_curve_expmt(dataset_name, config)
 

@@ -28,7 +28,7 @@ python subsampling.py early
 # Subsampling later portion of data collection
 # curve, where  sample increment = 2% of |queryable data|
 # and initialized data = 10% of |queryable data|
-python subsampling.py 
+python subsampling.py later 
 
 # Fitting baselines and our method to 
 # (sample size, validation performance) tuples

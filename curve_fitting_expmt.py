@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 from curve_models import NLLS, NLLS_w, NLLS_rse, power_law, CurveModel, linearized_power_law
 from utils.util import calc_pcti
 
-gl_expmt = '5_False_0.1_0.4_uniform_29000_30_1_290001_5800_0_0.5_0.5_0_0.8'
-ml_expmt = '5_False_0.1_0.4_uniform_100000_30_1_1000000_20000_0_0.5_0.5_0_0.8'
-mltiny_expmt = '5_False_0.1_0.4_uniform_21000_5250_0_30_1_213973_0.5_0.5_0_0.85'
-gltiny_expmt = '5_False_0.1_0.4_uniform_9400_30_1_94000_1880_0_0.5_0.5_0_0.8'
+gl_expmt = '0.1_5_False_uniform_30_0.5_0.5_5800_29000_290001'
+ml_expmt = '0.1_5_False_uniform_30_0.5_0.5_20000_100000_1000001'
+mltiny_expmt = '0.1_5_False_uniform_30_0.5_0.5_5250_21000_213973'
+gltiny_expmt = '0.1_5_False_uniform_30_0.5_0.5_1880_9400_94001'
 
 expmts = [('gl', gl_expmt), ('gl-tiny', gltiny_expmt), ('ml-20m-uniform', ml_expmt), ('ml-20m-tiny', mltiny_expmt)]
 for dataset_name, expmt in expmts:
