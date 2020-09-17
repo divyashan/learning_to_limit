@@ -170,47 +170,48 @@ def run_mse_curve_expmt(dataset_name, config):
         np.save(results_path + '/test_macro_mses', all_test_macro_mses)
 
 
-# Configs for earlier part of data collection curve
-init_pct = .0001
-base_config = {'init_pct': init_pct, 'n_runs': 5, 'checks': False, 
-               'init_mode': 'uniform', 'rank_opt': 30, 'item_pct': .5,
-               'user_pct': .5}
+if sys.argv[1] == 'early': 
+    # Configs for earlier part of data collection curve
+    init_pct = .0001
+    base_config = {'init_pct': init_pct, 'n_runs': 5, 'checks': False, 
+                   'init_mode': 'uniform', 'rank_opt': 30, 'item_pct': .5,
+                   'user_pct': .5}
 
-mltiny_config = base_config.copy()
-mltiny_config.update({'batch_size': 200, 'n_acquisitions': 2000, 'step_size': 50})
+    mltiny_config = base_config.copy()
+    mltiny_config.update({'batch_size': 200, 'n_acquisitions': 2000, 'step_size': 50})
 
-mluniform_config = base_config.copy()
-mluniform_config.update({'batch_size': 600, 'n_acquisitions': 1200, 'step_size': 30})
+    mluniform_config = base_config.copy()
+    mluniform_config.update({'batch_size': 600, 'n_acquisitions': 1200, 'step_size': 30})
 
-gltiny_config = base_config.copy()
-gltiny_config.update({'batch_size': 200, 'step_size': 25, 'n_acquisitions': 1000})
+    gltiny_config = base_config.copy()
+    gltiny_config.update({'batch_size': 200, 'step_size': 25, 'n_acquisitions': 1000})
 
-gl_config = base_config.copy()
-gl_config.update({'step_size': 50, 'batch_size': 580, 'n_acquisitions': 5800})
+    gl_config = base_config.copy()
+    gl_config.update({'step_size': 50, 'batch_size': 580, 'n_acquisitions': 5800})
 
-# Configs for later part of data collection curve
-init_pct = .10
-base_config = {'init_pct': init_pct, 'n_runs': 5, 'checks': False, 
-               'init_mode': 'uniform', 'rank_opt': 30, 'item_pct': .5,
-               'user_pct': .5}
+else:
+    # Configs for later part of data collection curve
+    init_pct = .10
+    base_config = {'init_pct': init_pct, 'n_runs': 5, 'checks': False, 
+                   'init_mode': 'uniform', 'rank_opt': 30, 'item_pct': .5,
+                   'user_pct': .5}
 
-mltiny_config = base_config.copy()
-mltiny_config.update({'step_size': 5250, 'batch_size': 21000, 'n_acquisitions': 213973})
+    mltiny_config = base_config.copy()
+    mltiny_config.update({'step_size': 5250, 'batch_size': 21000, 'n_acquisitions': 213973})
 
-mluniform_config = base_config.copy()
-mluniform_config.update({'step_size': 20000, 'batch_size': 100000, 'n_acquisitions': 1000001})
+    mluniform_config = base_config.copy()
+    mluniform_config.update({'step_size': 20000, 'batch_size': 100000, 'n_acquisitions': 1000001})
 
-gltiny_config = base_config.copy()
-gltiny_config.update({'step_size': 1880, 'batch_size': 9400, 'n_acquisitions': 94001})
+    gltiny_config = base_config.copy()
+    gltiny_config.update({'step_size': 1880, 'batch_size': 9400, 'n_acquisitions': 94001})
 
-gl_config = base_config.copy()
-gl_config.update({'step_size': 5800, 'batch_size': 29000, 'n_acquisitions': 290001})
+    gl_config = base_config.copy()
+    gl_config.update({'step_size': 5800, 'batch_size': 29000, 'n_acquisitions': 290001})
 
-dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
-                 ('ml-20m-uniform', mluniform_config),
-                 ('gl', gl_config)]
+    dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
+                     ('ml-20m-uniform', mluniform_config),
+                     ('gl', gl_config)]
 
-dataset_names = [('ml-20m-tiny', mltiny_config)]
 init_modes = ['uniform']
 for dataset_name, config in dataset_names:
     for init_mode in init_modes:

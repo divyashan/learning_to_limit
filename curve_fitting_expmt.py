@@ -84,7 +84,6 @@ for dataset_name, expmt in expmts:
 		    # this method fits a beginning power law curve and an end one
 		    start_cm = NLLS_rse(linearized_power_law)
             start = 0
-            end = np.min([9, i+1])
             end = int(i/2)
             start_cm.fit(ss[start:end], mses[start:end])
 
