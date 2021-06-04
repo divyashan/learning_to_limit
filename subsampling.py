@@ -240,7 +240,7 @@ elif sys.argv[1] == 'dataset_sizes':
         dataset_names.append(('ml-20m-tiny', mltiny_config))
 
 print(['_'.join([str(x) for x in config.values()]) for name,config in dataset_names])        
-init_modes = ['uniform'] 
+init_modes = ['uniform', 'user_subset', 'item_subset'] 
 for init_mode in init_modes:
     for dataset_name, config in dataset_names:
         print(init_mode, dataset_name)
