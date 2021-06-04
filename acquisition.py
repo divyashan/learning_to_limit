@@ -48,6 +48,7 @@ class Rand(Baseline):
 class QBC(Baseline):
 
     def get_neighbor_idxs(self, user_ratings, X_k, k):
+        
         comp_idxs = np.where(user_ratings != 0)[0]
         X_k_comp = X_k[:,comp_idxs]
         user_comp = user_ratings[comp_idxs]
@@ -55,6 +56,8 @@ class QBC(Baseline):
         return np.argsort(dists)[:k]
     
     def knn_impute(self, dataset, k=3):
+        ## Another way to interpret this is to build a set of 
+        # feature neighbors
         X = dataset.X.copy()
         observed_mask = dataset.observed_mask()
         unobserved_mask = np.logical_not(observed_mask)

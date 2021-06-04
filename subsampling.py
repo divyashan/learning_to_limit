@@ -1,5 +1,6 @@
 import os
 import numpy as np
+np.random.seed(42)
 import pandas as pd
 import pdb
 import sys
@@ -80,17 +81,17 @@ def run_mse_curve_expmt(dataset_name, config):
     n_acquisitions = config['n_acquisitions'] 
     
     acq_model_names = ['Random', 'Weighted', 'QBC'] 
-    curve_model_names = ['NLS_w', 'NLS_rse', 'linear', 'initial']
+    acq_model_names = ['Random']
     config_sig = '_'.join([str(x) for x in config.values()])
-    
+    print(config_sig) 
     for acq_model_name in acq_model_names:
+        print('ACQ MODEL: ', acq_model_name)
         acq_model = get_acquisition_model(acq_model_name)
         
         results = []
         results_path = "./results/forecasting/" + dataset_name + '/' + acq_model_name + '/' + config_sig
         if not os.path.exists(results_path):
             os.makedirs(results_path)
-        continue 
         all_sample_sizes, all_mses = [], []
         all_test_mses, all_macro_mses, all_test_macro_mses = [], [], []           
         for j in range(n_runs):
@@ -100,11 +101,11 @@ def run_mse_curve_expmt(dataset_name, config):
             worst_mse = worst_possible_MSE(dataset, rank_opt)
             best_val_mse = best_possible_MSE(dataset, rank_opt, "val")
             worst_val_mse = worst_possible_MSE(dataset, rank_opt, "val")
-
+            print("RUN: ", j)
+            print("BEST MSE: ", best_mse)
             i = 0
             mses, sample_sizes = [], []
             test_mses, macro_mses, test_macro_mses = [], [], []
-            curve_models = [get_curve_model(cm_name) for cm_name in curve_model_names]
             while i < n_acquisitions: 
                 acquired_idxs = acq_model.acquire_features(dataset, batch_size)
                 dataset.add(acquired_idxs)
@@ -129,35 +130,14 @@ def run_mse_curve_expmt(dataset_name, config):
                                worst_val_mse, best_val_mse)
                 micro_mse_val, macro_mse_val, micro_pct_val, _ = mse_scores_val
                 
-                # TODO: This portion might not need to be run, since we operate on the other files
-                """
-                for cm in curve_models:
-                    if i == 0:
-                        cm.fit(sample_sizes, mses)
-                    elif 'NLS' in cm.name:
-                        cm.fit(sample_sizes, mses)
-                    stop, pred_pct = cm.stop_condition(goal_pct, n_init, n_available, n_observable)
-                    pred_curr = cm.f(n_available, **cm.p)
-                    pred_best = cm.f(n_observable, **cm.p)
-                    pred_worst = cm.f(n_init, **cm.p)
-                    pct_available = dataset.pct_available_idxs()
-                    result = {'curve_model': cm.name, 
-                            'acq_model': acq_model_name,
-                            'n_acquired': i, 'pct_available': pct_available,
-                            'n_observable': n_observable,
-                            'micro_mse': micro_mse, 'micro_pct': micro_pct, 
-                            'goal_pct': goal_pct, 'n_available': n_available, 'n_init': n_init,
-                            'n_observable': n_observable,
-                            'macro_mse': macro_mse, 'run': j,
-                            'micro_mse_val': micro_mse_val, 
-                            'macro_mse_val': macro_mse_val,
-                            'micro_pct_val': micro_pct_val,
-                            'pred_pct': pred_pct, 'pred_curr': pred_curr,
-                            'pred_best': pred_best, 'pred_worst': pred_worst,
-                            'best_mse': best_mse, 'worst_mse': worst_mse}
-                    results.append(result)
-                    pd.DataFrame(results).to_csv(results_path + '/results_df')
-                """
+                result = {'acq_model': acq_model_name,
+                        'n_observable': n_observable,
+                        'n_init': n_init,
+                        'run': j,
+                        'best_mse': best_mse, 'worst_mse': worst_mse}
+                results.append(result)
+                pd.DataFrame(results).to_csv(results_path + '/results_df')
+                
                 i += batch_size
             all_sample_sizes.append(sample_sizes)
             all_mses.append(mses)
@@ -171,6 +151,7 @@ def run_mse_curve_expmt(dataset_name, config):
         np.save(results_path + '/test_macro_mses', all_test_macro_mses)
 
 
+dataset_names = []
 if sys.argv[1] == 'early': 
     # Configs for earlier part of data collection curve
     init_pct = .0001
@@ -179,18 +160,22 @@ if sys.argv[1] == 'early':
                    'user_pct': .5}
 
     mltiny_config = base_config.copy()
-    mltiny_config.update({'batch_size': 200, 'n_acquisitions': 2000, 'step_size': 50})
+    mltiny_config.update({'step_size': 50, 'batch_size': 200, 'n_acquisitions': 2000})
 
     mluniform_config = base_config.copy()
-    mluniform_config.update({'batch_size': 600, 'n_acquisitions': 1200, 'step_size': 30})
+    mluniform_config.update({'step_size': 30, 'batch_size': 600, 'n_acquisitions': 1200})
 
     gltiny_config = base_config.copy()
-    gltiny_config.update({'batch_size': 200, 'step_size': 25, 'n_acquisitions': 1000})
+    gltiny_config.update({'step_size': 25, 'batch_size': 200, 'n_acquisitions': 1000})
 
     gl_config = base_config.copy()
     gl_config.update({'step_size': 50, 'batch_size': 580, 'n_acquisitions': 5800})
+    
+    dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
+                     ('ml-20m-uniform', mluniform_config),
+                     ('gl', gl_config)]
 
-else:
+elif sys.argv[1] == 'later':
     # Configs for later part of data collection curve
     init_pct = .10
     base_config = {'init_pct': init_pct, 'n_runs': 5, 'checks': False, 
@@ -208,18 +193,60 @@ else:
 
     gl_config = base_config.copy()
     gl_config.update({'step_size': 5800, 'batch_size': 29000, 'n_acquisitions': 290001})
+    
+    dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
+                     ('ml-20m-uniform', mluniform_config),
+                     ('gl', gl_config)]
+    #dataset_names = [('ml-20m-tiny', mltiny_config)]
+    #dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config)]
+    #dataset_names = [('ml-20m-uniform', mluniform_config)]
+    #dataset_names = [('gl', gl_config)]
+    #dataset_names = [('gl-tiny', gltiny_config)]
+    #dataset_names = [('ml-20m-tiny', mltiny_config)]
+elif sys.argv[1] == 'step_sizes': 
+    init_pct = .10
+    base_config = {'init_pct': init_pct, 'n_runs': 5, 'checks': False, 
+                   'init_mode': 'uniform', 'rank_opt': 30, 'item_pct': .5,
+                   'user_pct': .5}
+    
+    #n_acquisitions = 10*29000 #gl
+    #n_acquisitions = 10*21000 #ml-tiny
+    n_acquisitions = 10*100000 #ml-20m-uniform
+    #n_acquisitions = 10*9400 # gl-tiny
+    step_pcts = [.005, .01, .02, .03, .04, .05, .06, .07, .08, .09, .10]
+    for step_pct in step_pcts:
+        ml_config = base_config.copy()
+        step_size = int(step_pct/(.005))*int(.005*n_acquisitions)
+        batch_size = int(2*step_size)
+        ml_config.update({'step_size': step_size, 'batch_size': batch_size, 'n_acquisitions': n_acquisitions})
+        dataset_names.append(('ml-20m-uniform', ml_config))
 
+elif sys.argv[1] == 'dataset_sizes':
+    init_pct = .10
+    batch_pct = .10
+    n_total_acquisitions = 213973
+    
+    base_config = {'init_pct': init_pct, 'n_runs': 5, 'checks': False, 
+                   'init_mode': 'uniform', 'rank_opt': 30, 'item_pct': .5,
+                   'user_pct': .5}
+    
+    dataset_size_pcts = [.20, .30, .40, .50, .60, .70, .80, .90, 1.0]
+    for dataset_size_pct in dataset_size_pcts:
+        n_acquisitions = int(dataset_size_pct*n_total_acquisitions)
+        batch_size = int(batch_pct*n_acquisitions)
+        step_size = int(batch_size/5) 
+        mltiny_config = base_config.copy()
+        mltiny_config.update({'step_size': step_size, 'batch_size': batch_size, 'n_acquisitions': n_acquisitions})
+        dataset_names.append(('ml-20m-tiny', mltiny_config))
 
-dataset_names = [('ml-20m-tiny', mltiny_config), ('gl-tiny', gltiny_config),
-                 ('ml-20m-uniform', mluniform_config),
-                 ('gl', gl_config)]
-
-init_modes = ['uniform', 'user-subset', 'item-subset']
+print(['_'.join([str(x) for x in config.values()]) for name,config in dataset_names])        
+init_modes = ['uniform'] 
 for init_mode in init_modes:
     for dataset_name, config in dataset_names:
+        print(init_mode, dataset_name)
         config['init_mode'] = init_mode
         run_mse_curve_expmt(dataset_name, config)
-
+# could stick with one dataset size, modify it to be bigger
 
 
 

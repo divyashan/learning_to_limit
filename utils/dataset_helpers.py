@@ -33,7 +33,7 @@ def get_movielens():
 def get_SVD_pred(dataset, rank, observed_idxs, test_idxs):
     train_ratings = dataset.get_funksvd_df(observed_idxs)
     test_ratings = dataset.get_funksvd_df(test_idxs)
-    svd = SVD(learning_rate=0.001, regularization=.005, n_epochs=20,
+    svd = SVD(learning_rate=0.001, regularization=.005, n_epochs=30,
               n_factors=rank, min_rating=1, max_rating=5)
     svd.fit(train_ratings, early_stopping=True, shuffle=False)
     try:

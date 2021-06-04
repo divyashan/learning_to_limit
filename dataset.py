@@ -27,7 +27,6 @@ class Dataset(object):
         pool_idxs, test_idxs = train_test_split(all_idxs, test_size=test_pct)
         val_idxs, test_idxs = train_test_split(test_idxs, test_size=.5)
         init_idxs, pool_idxs = self.split(pool_idxs, config)
-        
         self.init_idxs = set(init_idxs)
         self.pool_idxs = set(pool_idxs)
         self.val_idxs = set(val_idxs)
@@ -170,6 +169,9 @@ class MovieLensDataset(Dataset):
 
         val_idxs, test_idxs = train_test_split(test_idxs, test_size=.5)
         init_idxs, pool_idxs = self.split(train_idxs, config) 
+        selected_pool_idxs_idxs = np.random.choice(list(range(len(pool_idxs))), 
+                                     config['n_acquisitions'], replace=False)
+        pool_idxs = [pool_idxs[i] for i in selected_pool_idxs_idxs]
         
         self.init_idxs = set(init_idxs)
         self.pool_idxs = set(pool_idxs)

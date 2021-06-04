@@ -37,8 +37,9 @@ rank_opt = config['rank_opt']
 log_interval = config['log_interval']
 n_acquisitions = config['n_acquisitions']
 
-datasets = ['ml-20m-tiny', 'ml-20m-uniform', 'gl-tiny', 'gl']]
+datasets = ['ml-20m-tiny', 'ml-20m-uniform', 'gl-tiny', 'gl']
 model_names = ['Random', 'Weighted', 'QBC'] 
+model_names - ['Random']
 for dataset_name in datasets:
     
     for model_name in model_names:

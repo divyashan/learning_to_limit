@@ -16,7 +16,7 @@ def micro_MSE(true, pred, idxs):
     diffs = []
     for i,idx in enumerate(idxs):
         diffs.append(pred[i] - true[idx[0], idx[1]])
-    return np.sum(np.square(diffs))
+    return np.mean(np.square(diffs))
 
 def macro_MSE(true, pred, idxs):
     # idxs: idxs to calculate MSE over
@@ -42,6 +42,7 @@ def micro_pct_MSE(true, pred, idxs, worst_mse, best_mse):
     return current_mse, mse_diff/best_mse_diff
 
 def best_possible_MSE(dataset, rank_opt, mode="test"):
+    np.random.seed(42)
     if mode == "test":
         pred = get_SVD_pred(dataset, rank_opt, dataset.observable_idxs(), 
                             dataset.test_idxs)
