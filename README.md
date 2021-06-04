@@ -38,13 +38,12 @@ python curve_fitting_expmt.py
 
 All results will be saved to the ./results directory, under configs corresponding to the experiment parameters. Code to reproduce each of the figures in the paper can be found in the ./notebooks folder. 
 
-- Figure 1: 'Performance Curve Plots.ipynb'
-- Table 2: 'Table 2 | Diminishing Returns 
-- Figure 2: 'Table 2 + Figure 2 | Diminishing Returns' + todo fill this in
+- Figure 1: 'Figure 1 | Performance Curve Plots.ipynb'
+- Table 2: 'Table 2 | Diminishing Returns' 
+- Figure 2: 'Table 2 + Figure 2AC | Diminishing Returns' + 'Figure 2BD | Performance Curve Plots'
 - Table 3: 'Table 3 | Robustness to AFA Algorithms'
 - Table 4: 'Table 4 | Robustness to Query Size'
 - Figure 3A: 'Figure 3A | Per-User Power Law Curve Results'
-- Figure 3B: '
-- Figure 3C: 'Figure 3C | AFA Burden in Individual Users'
+- Figure 3BC: 'Figure 3BC | AFA Burden in Individual Users'
 
 
