@@ -209,17 +209,17 @@ elif sys.argv[1] == 'step_sizes':
                    'init_mode': 'uniform', 'rank_opt': 30, 'item_pct': .5,
                    'user_pct': .5}
     
-    #n_acquisitions = 10*29000 #gl
+    n_acquisitions = 10*29000 #gl
     #n_acquisitions = 10*21000 #ml-tiny
-    n_acquisitions = 10*100000 #ml-20m-uniform
+    #n_acquisitions = 10*100000 #ml-20m-uniform
     #n_acquisitions = 10*9400 # gl-tiny
     step_pcts = [.005, .01, .02, .03, .04, .05, .06, .07, .08, .09, .10]
     for step_pct in step_pcts:
         ml_config = base_config.copy()
         step_size = int(step_pct/(.005))*int(.005*n_acquisitions)
         batch_size = int(2*step_size)
-        ml_config.update({'step_size': step_size, 'batch_size': batch_size, 'n_acquisitions': n_acquisitions})
-        dataset_names.append(('ml-20m-uniform', ml_config))
+        gl_config.update({'step_size': step_size, 'batch_size': batch_size, 'n_acquisitions': n_acquisitions})
+        dataset_names.append(('gl', gl_config))
 
 elif sys.argv[1] == 'dataset_sizes':
     init_pct = .10
